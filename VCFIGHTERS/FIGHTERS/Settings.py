@@ -47,6 +47,14 @@ def _is_valid_target_link(link: str) -> bool:
     return bool(_USERNAME_RE.match(bare))
 
 
+def _is_chat_id_input(text: str) -> bool:
+    """Numeric chat id, e.g. -1001234567890 (supergroup/channel) or a
+    plain group id. Telegram group/channel ids are always negative.
+    Used when a userbot is already a member but no working invite
+    link is available."""
+    return bool(re.match(r'^-\d+$', text))
+
+
 # ──────────────────────────────────────────────────────────────
 # AUTH
 # ──────────────────────────────────────────────────────────────
@@ -503,7 +511,8 @@ async def _show_targets(query: CallbackQuery, targets: list, page: int, ask_new:
         await query.edit_message_text(
             "🎯 **ᴛᴀʀɢєᴛ sєᴛ ᴋᴀʀᴏ**\n\n"
             "ɢʀᴏᴜρ ʟιηᴋ ʙнєᴊᴏ:\n"
-            "`t.me/+xxxx` (ρʀιᴠᴀᴛє) ʏᴀ `t.me/groupname` / `@groupname` (ρᴜʙʟιᴄ)",
+            "`t.me/+xxxx` (ρʀιᴠᴀᴛє) ʏᴀ `t.me/groupname` / `@groupname` (ρᴜʙʟιᴄ)\n\n"
+            "ʏᴀ ᴀɢᴀʀ ᴜsєʀʙᴏᴛ ᴀʟʀєᴀᴅʏ ᴜs ɢʀᴏᴜρ ϻєιη нᴀι ᴛᴏ **ᴄʜᴀᴛ ID** ʙнєᴊᴏ: `-1001234567890`",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("˹ ◀️ 𝐁ᴀᴄᴋ ˼", callback_data="config_main")]
             ]),
@@ -561,7 +570,8 @@ async def cb_target_new(client: Client, query: CallbackQuery):
     await query.edit_message_text(
         "🎯 **ηʏᴀ ᴛᴀʀɢєᴛ**\n\n"
         "ɢʀᴏᴜρ ʟιηᴋ ʙнєᴊᴏ:\n"
-        "`t.me/+xxxx` (ρʀιᴠᴀᴛє) ʏᴀ `t.me/groupname` / `@groupname` (ρᴜʙʟιᴄ)",
+        "`t.me/+xxxx` (ρʀιᴠᴀᴛє) ʏᴀ `t.me/groupname` / `@groupname` (ρᴜʙʟιᴄ)\n\n"
+        "ʏᴀ ᴀɢᴀʀ ᴜsєʀʙᴏᴛ ᴀʟʀєᴀᴅʏ ᴜs ɢʀᴏᴜρ ϻєιη нᴀι ᴛᴏ **ᴄʜᴀᴛ ID** ʙнєᴊᴏ: `-1001234567890`",
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("˹ ◀️ 𝐁ᴀᴄᴋ ˼", callback_data="config_main")]
         ]),
@@ -781,13 +791,57 @@ async def conversation_handler(client: Client, message: Message):
 
     # ── Target link ──────────────────────────────────────────
     elif step == "await_target_link":
-        link = message.text.strip()
+        raw = message.text.strip()
+
+        # Numeric chat id path — for userbots already in the group but
+        # with no working invite link (e.g. link expired/revoked).
+        if _is_chat_id_input(raw):
+            target_chat_id = int(raw)
+            clear_state(uid)
+            status_msg = await message.reply("⏳ ᴄʜᴀᴛ ID sє ᴠєʀιғʏ ᴋʀ ʀᴀнᴀ нᴜη...")
+
+            userbots = await get_all_userbots()
+            joined   = []
+
+            from VCFIGHTERS.core.userbot import userbot_manager
+            for ub in userbots:
+                try:
+                    ub_client = userbot_manager.get_client(ub["session_string"])
+                    await ub_client.get_chat(target_chat_id)
+                    joined.append(ub.get("phone", "?"))
+                    await asyncio.sleep(1)
+                except Exception as e:
+                    log.warning(f"Verify failed {ub.get('phone')}: {e}")
+
+            if joined:
+                await add_target({
+                    "chat_id":         target_chat_id,
+                    "invite_link":     None,
+                    "userbots_joined": joined,
+                    "added_at":        int(time.time()),
+                })
+                await status_msg.edit(
+                    f"✅ **{len(joined)} ᴜsєʀʙᴏᴛs ᴀʟʀєᴀᴅʏ ϻєϻʙєʀ ᴠᴇʀιғιєᴅ**\n"
+                    f"🎯 ᴛᴀʀɢєᴛ sᴀᴠєᴅ: `{target_chat_id}`",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("˹ ◀️ 𝐁ᴀᴄᴋ ˼", callback_data="config_main")]
+                    ]),
+                )
+            else:
+                await status_msg.edit(
+                    "❌ ᴋᴏι ʙнι ᴜsєʀʙᴏᴛ ιs ᴄнᴀᴛ ID ϻєιη ηᴀнιιη ϻιʟᴀ.\n"
+                    "ᴜsєʀʙᴏᴛ ᴋᴏ ρнʟє ᴜs ɢʀᴏᴜρ ϻєιη ϻᴀηᴜᴀʟʟʏ ᴀᴅᴅ ᴋʀᴏ, ʏᴀ ᴠᴀʟιᴅ ʟιηᴋ ʙнєᴊᴏ."
+                )
+            return
+
+        link = raw
         if not _is_valid_target_link(link):
             await message.reply(
                 "❌ ιηᴠᴀʟιᴅ ʟιηᴋ.\n\n"
                 "sυρρᴏʀᴛєᴅ ғᴏʀϻᴀᴛs:\n"
                 "• ρʀιᴠᴀᴛє: `t.me/+xxxx`\n"
-                "• ρᴜʙʟιᴄ: `t.me/groupname` ʏᴀ `@groupname`"
+                "• ρᴜʙʟιᴄ: `t.me/groupname` ʏᴀ `@groupname`\n"
+                "• ᴄʜᴀᴛ ID (ᴀɢᴀʀ ᴜsєʀʙᴏᴛ ᴀʟʀєᴀᴅʏ ϻєϻʙєʀ нᴀι): `-1001234567890`"
             )
             return
         clear_state(uid)
