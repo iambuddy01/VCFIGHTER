@@ -10,6 +10,7 @@ from pyrogram.types import (
     InlineKeyboardMarkup,
     Message,
 )
+import re
 
 import Config
 from VCFIGHTERS.logging import LOGGER
@@ -29,6 +30,21 @@ from VCFIGHTERS.database.mangodb import (
 from VCFIGHTERS.FIGHTERS.ffmpegsettings import open_ffmpeg_panel
 
 log = LOGGER("Settings")
+
+# Telegram usernames: letters/digits/underscore, 5-32 chars, must start with a letter
+_USERNAME_RE = re.compile(r'^[a-zA-Z][a-zA-Z0-9_]{4,31}$')
+
+
+def _is_valid_target_link(link: str) -> bool:
+    """Private invite links (t.me/+..., joinchat/...), public t.me links
+    (t.me/groupname), and bare @usernames are all accepted."""
+    if "t.me/+" in link or "joinchat" in link:
+        return True
+    m = re.search(r't\.me/([a-zA-Z][a-zA-Z0-9_]{4,31})/?$', link)
+    if m:
+        return True
+    bare = link.lstrip("@")
+    return bool(_USERNAME_RE.match(bare))
 
 
 # ──────────────────────────────────────────────────────────────
@@ -486,7 +502,8 @@ async def _show_targets(query: CallbackQuery, targets: list, page: int, ask_new:
         set_state(query.from_user.id, "await_target_link")
         await query.edit_message_text(
             "🎯 **ᴛᴀʀɢєᴛ sєᴛ ᴋᴀʀᴏ**\n\n"
-            "ɢʀᴏᴜρ ιηᴠιᴛє ʟιηᴋ ʙнєᴊᴏ:\n`t.me/+xxxx`",
+            "ɢʀᴏᴜρ ʟιηᴋ ʙнєᴊᴏ:\n"
+            "`t.me/+xxxx` (ρʀιᴠᴀᴛє) ʏᴀ `t.me/groupname` / `@groupname` (ρᴜʙʟιᴄ)",
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("˹ ◀️ 𝐁ᴀᴄᴋ ˼", callback_data="config_main")]
             ]),
@@ -542,7 +559,9 @@ async def cb_target_new(client: Client, query: CallbackQuery):
         return
     set_state(query.from_user.id, "await_target_link")
     await query.edit_message_text(
-        "🎯 **ηʏᴀ ᴛᴀʀɢєᴛ**\n\nɢʀᴏᴜρ ιηᴠιᴛє ʟιηᴋ ʙнєᴊᴏ:\n`t.me/+xxxx`",
+        "🎯 **ηʏᴀ ᴛᴀʀɢєᴛ**\n\n"
+        "ɢʀᴏᴜρ ʟιηᴋ ʙнєᴊᴏ:\n"
+        "`t.me/+xxxx` (ρʀιᴠᴀᴛє) ʏᴀ `t.me/groupname` / `@groupname` (ρᴜʙʟιᴄ)",
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("˹ ◀️ 𝐁ᴀᴄᴋ ˼", callback_data="config_main")]
         ]),
@@ -763,8 +782,13 @@ async def conversation_handler(client: Client, message: Message):
     # ── Target link ──────────────────────────────────────────
     elif step == "await_target_link":
         link = message.text.strip()
-        if "t.me/+" not in link and "joinchat" not in link:
-            await message.reply("❌ ιηᴠᴀʟιᴅ ʟιηᴋ. ᴠᴀʟιᴅ ιηᴠιᴛє ʟιηᴋ ʙнєᴊᴏ.")
+        if not _is_valid_target_link(link):
+            await message.reply(
+                "❌ ιηᴠᴀʟιᴅ ʟιηᴋ.\n\n"
+                "sυρρᴏʀᴛєᴅ ғᴏʀϻᴀᴛs:\n"
+                "• ρʀιᴠᴀᴛє: `t.me/+xxxx`\n"
+                "• ρᴜʙʟιᴄ: `t.me/groupname` ʏᴀ `@groupname`"
+            )
             return
         clear_state(uid)
         status_msg = await message.reply("⏳ sᴀʙ ᴜsєʀʙᴏᴛs sє ᴊᴏιη ᴋʀ ʀᴀнᴀ нᴜη...")
