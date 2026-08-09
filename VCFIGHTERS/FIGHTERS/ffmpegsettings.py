@@ -5,6 +5,7 @@
 
 from pyrogram import Client
 from pyrogram import filters as pyro_filters
+from pyrogram.errors import MessageNotModified
 from pyrogram.types import (
     CallbackQuery,
     InlineKeyboardButton,
@@ -117,6 +118,19 @@ def build_filter_chain(s: dict) -> str | None:
 
 
 # ──────────────────────────────────────────────────────────────
+# SAFE EDIT HELPER
+# ──────────────────────────────────────────────────────────────
+
+async def safe_edit(query: CallbackQuery, text: str, keyboard: InlineKeyboardMarkup):
+    """Edit the panel message, ignoring Telegram's MESSAGE_NOT_MODIFIED error
+    (raised when the new content is identical to what's already shown)."""
+    try:
+        await query.edit_message_text(text, reply_markup=keyboard)
+    except MessageNotModified:
+        pass
+
+
+# ──────────────────────────────────────────────────────────────
 # PANEL BUILDER
 # ──────────────────────────────────────────────────────────────
 
@@ -214,7 +228,7 @@ async def open_ffmpeg_panel(client: Client, query: CallbackQuery):
         return
     s = await get_ffmpeg_settings()
     text, keyboard = build_panel(s)
-    await query.edit_message_text(text, reply_markup=keyboard)
+    await safe_edit(query, text, keyboard)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -268,7 +282,7 @@ async def ffmpeg_callback_handler(client: Client, query: CallbackQuery):
         await save_ffmpeg_settings(s)
         await query.answer("🔄 ʀєsєᴛ ᴅᴏηє ✅", show_alert=False)
         text, keyboard = build_panel(s)
-        await query.edit_message_text(text, reply_markup=keyboard)
+        await safe_edit(query, text, keyboard)
         return
 
     # ── Save & Apply ──────────────────────────────────────────
@@ -293,12 +307,12 @@ async def ffmpeg_callback_handler(client: Client, query: CallbackQuery):
         )
         await query.answer(msg, show_alert=True)
         text, keyboard = build_panel(s)
-        await query.edit_message_text(text, reply_markup=keyboard)
+        await safe_edit(query, text, keyboard)
         return
 
     # ── Rebuild panel after any toggle ───────────────────────
     await save_ffmpeg_settings(s)
     await query.answer()
     text, keyboard = build_panel(s)
-    await query.edit_message_text(text, reply_markup=keyboard)
+    await safe_edit(query, text, keyboard)
     
