@@ -139,7 +139,7 @@ async def _stop_recording(user_id: int) -> Optional[str]:
 
 async def register_participant_handlers():
     from pytgcalls import filters as call_filters
-    from pytgcalls.types import Update
+    from pytgcalls.types import UpdatedGroupCallParticipant
 
     if not vc._instances:
         log.warning("⚠️ No PyTgCalls instances — participant handlers NOT registered")
@@ -147,41 +147,42 @@ async def register_participant_handlers():
 
     for session, pytg in vc._instances.items():
 
-        @pytg.on_update(call_filters.participants_change)
-        async def _on_participant_change(_, update: Update):
+        @pytg.on_update(call_filters.call_participant())
+        async def _on_participant_change(_, update: UpdatedGroupCallParticipant):
             mode = await get_mode()
             if mode != "auto":
                 return
 
-            for participant in update.participants:
-                uid = participant.user_id
-                if not (is_owner(uid) or await is_sudo(uid)):
-                    continue
+            participant = update.participant
+            uid = participant.user_id
+            if not (is_owner(uid) or await is_sudo(uid)):
+                return
 
-                chat_id       = update.chat_id
-                is_muted      = participant.muted
-                track         = _auto_tracking.get(uid, {})
-                was_recording = track.get("recording", False)
+            chat_id       = update.chat_id
+            is_muted      = participant.muted
+            track         = _auto_tracking.get(uid, {})
+            was_recording = track.get("recording", False)
 
-                if not is_muted and not was_recording:
-                    log.info(f"🎙️ {uid} mic ON → recording start")
-                    _cleanup_old_recording(uid)
-                    await _start_recording(uid, chat_id)
+            if not is_muted and not was_recording:
+                log.info(f"🎙️ {uid} mic ON → recording start")
+                _cleanup_old_recording(uid)
+                await _start_recording(uid, chat_id)
 
-                elif is_muted and was_recording:
-                    log.info(f"🔇 {uid} mic OFF → playing recording")
-                    rec_path = await _stop_recording(uid)
-                    if not rec_path:
-                        log.warning("⚠️ Recording empty, skipping")
-                        return
+            elif is_muted and was_recording:
+                log.info(f"🔇 {uid} mic OFF → playing recording")
+                rec_path = await _stop_recording(uid)
+                if not rec_path:
+                    log.warning("⚠️ Recording empty, skipping")
+                    return
 
-                    screen_sharing = any(
-                        p.video_stopped is False
-                        for p in update.participants
-                        if p.user_id != uid
-                    )
-                    await vc.play_loop(chat_id=chat_id, file_path=rec_path, is_video=screen_sharing)
-                    log.info(f"{'📺 video+audio' if screen_sharing else '🔊 audio'} loop → chat {chat_id}")
+                # NOTE: the current pytgcalls delivers one participant per
+                # update (no more `update.participants` list), so we can no
+                # longer check whether some OTHER participant is screen
+                # sharing at this instant. Using this participant's own
+                # `screen_sharing` state instead — closest available signal.
+                screen_sharing = participant.screen_sharing
+                await vc.play_loop(chat_id=chat_id, file_path=rec_path, is_video=screen_sharing)
+                log.info(f"{'📺 video+audio' if screen_sharing else '🔊 audio'} loop → chat {chat_id}")
 
         log.info(f"✅ Participant handler registered → ...{session[-10:]}")
 
