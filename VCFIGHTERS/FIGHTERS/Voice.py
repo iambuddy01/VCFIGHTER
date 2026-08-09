@@ -469,8 +469,10 @@ async def pause_handler(client, message: Message):
     uid = message.from_user.id
     if not await is_authorized(uid):
         return
-    await vc.stop(message.chat.id, leave_vc=False)
-    await message.reply("⏸️ **ρᴀᴜsєᴅ.** ᴜsє `/resume` ᴛᴏ ᴄᴏηᴛιηᴜє.")
+    if await vc.pause(message.chat.id):
+        await message.reply("⏸️ **ρᴀᴜsєᴅ.** ᴜsє `/resume` ᴛᴏ ᴄᴏηᴛιηᴜє.")
+    else:
+        await message.reply("⚠️ ᴋᴜᴄн нι ρʟᴀʏ ηᴀнιιη нᴏ ʀᴀнᴀ нᴀι ιs ᴄнᴀᴛ ϻєιη.")
 
 
 @app.on_message(pyro_filters.command("resume") & pyro_filters.group)
@@ -479,13 +481,20 @@ async def resume_handler(client, message: Message):
     if not await is_authorized(uid):
         return
     chat_id = message.chat.id
-    file    = _dm_current.get(chat_id)
+
+    if await vc.resume(chat_id):
+        await message.reply("▶️ **ʀєsᴜϻєᴅ!**")
+        return
+
+    # Fallback: no tracked paused stream (e.g. after a bot restart) —
+    # restart playback from the last known DM file for this chat.
+    file = _dm_current.get(chat_id)
     if not file or not os.path.exists(file):
-        await message.reply("⚠️ ηᴏᴛнιηɢ ᴛᴏ ʀєsᴜϻє. sєηᴅ ᴀη ᴀᴜᴅιᴏ ғιʟє ғιʀsᴛ.")
+        await message.reply("⚠️ ᴋᴜᴄн ρᴀᴜsєᴅ ηᴀнιιη ϻιʟᴀ. sєηᴅ ᴀη ᴀᴜᴅιᴏ ғιʟє ғιʀsᴛ.")
         return
     success = await vc.play_loop(chat_id, file)
     if success:
-        await message.reply("▶️ **ʀєsᴜϻєᴅ!**")
+        await message.reply("▶️ **ʀєsᴜϻєᴅ** *(ʟᴀsᴛ ᴀᴜᴅιᴏ sє ʀєsᴛᴀʀᴛ)*!")
     else:
         await message.reply("❌ **ғᴀιʟєᴅ ᴛᴏ ʀєsᴜϻє.**")
 
