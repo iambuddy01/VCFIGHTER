@@ -3,6 +3,7 @@ import time
 
 from pyrogram import Client
 from pyrogram import filters as pyro_filters
+from pyrogram.errors import UserAlreadyParticipant
 from pyrogram.types import (
     CallbackQuery,
     InlineKeyboardButton,
@@ -776,8 +777,13 @@ async def conversation_handler(client: Client, message: Message):
         for ub in userbots:
             try:
                 ub_client = userbot_manager.get_client(ub["session_string"])
-                chat      = await ub_client.join_chat(link)
-                chat_id   = chat.id
+                try:
+                    chat = await ub_client.join_chat(link)
+                except UserAlreadyParticipant:
+                    # Userbot is already a member — fetch the chat instead of joining
+                    chat = await ub_client.get_chat(link)
+                    log.info(f"{ub.get('phone')} already in chat — using existing membership")
+                chat_id = chat.id
                 joined.append(ub.get("phone", "?"))
                 await asyncio.sleep(3)
             except Exception as e:
