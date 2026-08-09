@@ -13,14 +13,26 @@ from VCFIGHTERS.logging import LOGGER
 
 log = LOGGER("VCCall")
 
+_AUDIO_QUALITY_MAP = {
+    "low":    AudioQuality.LOW,
+    "medium": AudioQuality.MEDIUM,
+    "high":   AudioQuality.STUDIO,
+}
+_VIDEO_QUALITY_MAP = {
+    "low":    VideoQuality.SD_480p,
+    "medium": VideoQuality.HD_720p,
+    "high":   VideoQuality.FHD_1080p,
+}
+
 
 # ══════════════════════════════════════════════════════════════
 #  FFMPEG — Pre-process audio file with filters → temp pipe
 # ══════════════════════════════════════════════════════════════
 
 async def build_ffmpeg_filter_str() -> str:
-    cfg     = await get_ffmpeg_settings()
-    filters = []
+    cfg      = await get_ffmpeg_settings()
+    pytg_cfg = await get_pytgcalls_settings()
+    filters  = []
 
     vol = cfg.get("volume", 1.0)
     if vol != 1.0:
@@ -44,6 +56,9 @@ async def build_ffmpeg_filter_str() -> str:
 
     if cfg.get("echo", False):
         filters.append("aecho=0.8:0.9:1000:0.3")
+
+    if pytg_cfg.get("noise_suppression", False):
+        filters.append("afftdn")
 
     return ",".join(filters) if filters else ""
 
@@ -163,7 +178,8 @@ class VCCall:
 
         pytg_cfg      = await get_pytgcalls_settings()
         quality_str   = pytg_cfg.get("quality", "medium")
-        audio_quality = AudioQuality.STUDIO
+        audio_quality = _AUDIO_QUALITY_MAP.get(quality_str, AudioQuality.STUDIO)
+        video_quality = _VIDEO_QUALITY_MAP.get(quality_str, VideoQuality.HD_720p)
 
         try:
             if is_video:
@@ -171,7 +187,7 @@ class VCCall:
                     audio_path       = processed,
                     video_path       = "VCFIGHTERS/Assists/screen-20260507-153325.mp4",
                     audio_parameters = audio_quality,
-                    video_parameters = VideoQuality.HD_720p,
+                    video_parameters = video_quality,
                 )
             else:
                 stream = MediaStream(
@@ -183,28 +199,38 @@ class VCCall:
             self._active_ub[chat_id] = session
 
             mode_str = "🔁 loop" if loop else "▶️ once"
-            log.info(f"{mode_str} | chat={chat_id} | file={processed}")
+            log.info(f"{mode_str} | chat={chat_id} | file={processed} | quality={quality_str}")
             return True
 
         except Exception as e:
             log.error(f"❌ Play failed → chat {chat_id}: {e}")
             return False
 
+    async def _resolve_is_video(self, is_video: Optional[bool]) -> bool:
+        """Explicit caller choice wins. Otherwise fall back to the
+        configured stream_type from the pytgcalls settings panel."""
+        if is_video is not None:
+            return is_video
+        cfg = await get_pytgcalls_settings()
+        return cfg.get("stream_type", "audio") == "video"
+
     async def play(self, chat_id: int, file_path: str,
-                   session: Optional[str] = None, is_video: bool = False) -> bool:
+                   session: Optional[str] = None, is_video: Optional[bool] = None) -> bool:
         pytg, ses = self._resolve(session)
         if not pytg:
             return False
+        resolved_video = await self._resolve_is_video(is_video)
         self._loop_data.pop(chat_id, None)
-        return await self._do_play(pytg, chat_id, ses, file_path, is_video, False)
+        return await self._do_play(pytg, chat_id, ses, file_path, resolved_video, False)
 
     async def play_loop(self, chat_id: int, file_path: str,
-                        session: Optional[str] = None, is_video: bool = False) -> bool:
+                        session: Optional[str] = None, is_video: Optional[bool] = None) -> bool:
         pytg, ses = self._resolve(session)
         if not pytg:
             return False
-        self._loop_data[chat_id] = (file_path, is_video)
-        return await self._do_play(pytg, chat_id, ses, file_path, is_video, True)
+        resolved_video = await self._resolve_is_video(is_video)
+        self._loop_data[chat_id] = (file_path, resolved_video)
+        return await self._do_play(pytg, chat_id, ses, file_path, resolved_video, True)
 
     async def replace_audio(self, chat_id: int, new_file: str,
                             session: Optional[str] = None) -> bool:
@@ -225,6 +251,40 @@ class VCCall:
                     log.warning(f"⚠️ leave_call error: {e}")
         else:
             self._active_ub.pop(chat_id, None)
+
+    async def pause(self, chat_id: int) -> bool:
+        """Actually pause the ongoing stream (audio keeps the VC connection
+        open, just stops sending frames) — unlike stop(leave_vc=False),
+        which only cleared bookkeeping and left the stream playing."""
+        session = self._active_ub.get(chat_id)
+        pytg    = self._get_instance(session)
+        if not pytg:
+            log.warning(f"⚠️ No active stream to pause → chat {chat_id}")
+            return False
+        try:
+            await pytg.pause(chat_id)
+            log.info(f"⏸️ Paused → chat {chat_id}")
+            return True
+        except Exception as e:
+            log.error(f"❌ Pause failed → chat {chat_id}: {e}")
+            return False
+
+    async def resume(self, chat_id: int) -> bool:
+        """Resume a stream previously paused via pause(). Returns False if
+        there's no tracked active stream for this chat (e.g. after a
+        restart) — caller should fall back to restarting playback."""
+        session = self._active_ub.get(chat_id)
+        pytg    = self._get_instance(session)
+        if not pytg:
+            log.warning(f"⚠️ No active stream to resume → chat {chat_id}")
+            return False
+        try:
+            await pytg.resume(chat_id)
+            log.info(f"▶️ Resumed → chat {chat_id}")
+            return True
+        except Exception as e:
+            log.error(f"❌ Resume failed → chat {chat_id}: {e}")
+            return False
 
     async def stop_all(self):
         for chat_id in list(self._active_ub.keys()):
