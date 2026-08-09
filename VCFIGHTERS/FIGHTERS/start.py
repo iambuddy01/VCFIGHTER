@@ -196,27 +196,27 @@ async def _private_caption(mention: str) -> str:
 
     return (
         f"┌─── ˹ <b>ᴠᴄғɪɢʜᴛᴇʀ</b> ˼ ─── ⏤‌‌●\n"
-        f"<emoji id='5262770659267735289'>😈</emoji> ┆ <b>ʜᴇʏ, {mention}</b>\n"
-        f"<emoji id='6291835288561917135'>😎</emoji> ┆ <b>ɪ ᴀᴍ @{me.username}</b>\n"
+        f"<emoji id=\"5262770659267735289\">😈</emoji> ┆ <b>ʜᴇʏ, {mention}</b>\n"
+        f"<emoji id=\"6291835288561917135\">😎</emoji> ┆ <b>ɪ ᴀᴍ @{me.username}</b>\n"
         f"└──────────────────────•\n\n"
         f"<blockquote>"
-        f"<spoiler><b><emoji id='6294070144729619431'>💀</emoji> ᴛʜᴇ ᴜʟᴛɪᴍᴀᴛᴇ ᴠᴄ ғɪɢʜᴛᴇʀ ʙᴏᴛ!</b></spoiler>"
+        f"<spoiler><b><emoji id=\"6294070144729619431\">💀</emoji> ᴛʜᴇ ᴜʟᴛɪᴍᴀᴛᴇ ᴠᴄ ғɪɢʜᴛᴇʀ ʙᴏᴛ!</b></spoiler>"
         f"</blockquote>\n"
         f"<blockquote>"
-        f"<b><emoji id='6294063539069917326'>😉</emoji> ᴜᴘᴛɪᴍᴇ:</b> {_uptime()}\n"
-        f"<b><emoji id='5413415116756500503'>☠️</emoji> ᴄᴘᴜ ʟᴏᴀᴅ:</b> {cpu}%\n"
-        f"<b><emoji id='6080176744709495278'>🐾</emoji> ʀᴀᴍ:</b> {ram}%\n"
-        f"<b><emoji id='6291837599254322363'>💾</emoji> ᴅɪsᴋ:</b> {disk}%"
+        f"<b><emoji id=\"6294063539069917326\">😉</emoji> ᴜᴘᴛɪᴍᴇ:</b> {_uptime()}\n"
+        f"<b><emoji id=\"5413415116756500503\">☠️</emoji> ᴄᴘᴜ ʟᴏᴀᴅ:</b> {cpu}%\n"
+        f"<b><emoji id=\"6080176744709495278\">🐾</emoji> ʀᴀᴍ:</b> {ram}%\n"
+        f"<b><emoji id=\"6291837599254322363\">💾</emoji> ᴅɪsᴋ:</b> {disk}%"
         f"</blockquote>\n"
         f"<blockquote>"
-        f"<b><emoji id='5999100917645841519'>💀</emoji> ᴜsᴇʀʙᴏᴛs:</b> {ub_count} ᴀᴄᴛɪᴠᴇ\n"
-        f"<b><emoji id='5413546177683539369'>😈</emoji> ᴛᴀʀɢᴇᴛs:</b> {len(targets)}\n"
-        f"<b><emoji id='6001132493011425597'>⚡</emoji> ᴍᴏᴅᴇ:</b> {mode.upper()}"
+        f"<b><emoji id=\"5999100917645841519\">💀</emoji> ᴜsᴇʀʙᴏᴛs:</b> {ub_count} ᴀᴄᴛɪᴠᴇ\n"
+        f"<b><emoji id=\"5413546177683539369\">😈</emoji> ᴛᴀʀɢᴇᴛs:</b> {len(targets)}\n"
+        f"<b><emoji id=\"6001132493011425597\">⚡</emoji> ᴍᴏᴅᴇ:</b> {mode.upper()}"
         f"</blockquote>\n"
         f"•──────────────────────•\n"
         f"<blockquote>"
-        f"<b><emoji id='6294023338176028117'>💀</emoji> ✦ᴘᴏᴡᴇʀᴇᴅ ʙʏ » "
-        f"<a href='{getattr(Config, 'SUPPORT_URL', 'https://t.me/Zcziiy')}'>"
+        f"<b><emoji id=\"6294023338176028117\">💀</emoji> ✦ᴘᴏᴡᴇʀᴇᴅ ʙʏ » "
+        f"<a href=\"{getattr(Config, 'SUPPORT_URL', 'https://t.me/Zcziiy')}\">"
         f"<spoiler>── 𝛞 𝛜 𝛈 𝛔 𝛈</spoiler></a></b>"
         f"</blockquote>\n"
         f"•──────────────────────•"
@@ -228,11 +228,11 @@ async def _group_caption(group_name: str) -> str:
     mode     = await get_mode()
     return (
         f"<blockquote>"
-        f"<emoji id='6080176744709495278'>🐾</emoji> ʜᴇʟʟᴏ~ <b>ɪ'ᴍ ᴠᴄғɪɢʜᴛᴇʀ</b> ᴀɴᴅ ɪ'ᴍ ᴀʟɪᴠᴇ! ✨\n\n"
-        f"<emoji id='5413415116756500503'>☠️</emoji> <b>ᴜᴘᴛɪᴍᴇ   :</b> <code>{_uptime()}</code>\n"
-        f"<emoji id='5999100917645841519'>💀</emoji> <b>ᴜsᴇʀʙᴏᴛs:</b> {ub_count} ᴀᴄᴛɪᴠᴇ\n"
-        f"<emoji id='6001132493011425597'>⚡</emoji> <b>ᴍᴏᴅᴇ    :</b> {mode.upper()}\n\n"
-        f"<spoiler><emoji id='5262770659267735289'>⚡</emoji> ᴠᴄ ғɪɢʜᴛᴇʀ — ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʏᴜᴋɪᴛᴇᴀᴍ</spoiler>"
+        f"<emoji id=\"6080176744709495278\">🐾</emoji> ʜᴇʟʟᴏ~ <b>ɪ'ᴍ ᴠᴄғɪɢʜᴛᴇʀ</b> ᴀɴᴅ ɪ'ᴍ ᴀʟɪᴠᴇ! ✨\n\n"
+        f"<emoji id=\"5413415116756500503\">☠️</emoji> <b>ᴜᴘᴛɪᴍᴇ   :</b> <code>{_uptime()}</code>\n"
+        f"<emoji id=\"5999100917645841519\">💀</emoji> <b>ᴜsᴇʀʙᴏᴛs:</b> {ub_count} ᴀᴄᴛɪᴠᴇ\n"
+        f"<emoji id=\"6001132493011425597\">⚡</emoji> <b>ᴍᴏᴅᴇ    :</b> {mode.upper()}\n\n"
+        f"<spoiler><emoji id=\"5262770659267735289\">⚡</emoji> ᴠᴄ ғɪɢʜᴛᴇʀ — ᴘᴏᴡᴇʀᴇᴅ ʙʏ ʏᴜᴋɪᴛᴇᴀᴍ</spoiler>"
         f"</blockquote>"
     )
 
@@ -260,7 +260,7 @@ async def _fire_animation(message: Message) -> Message | None:
 @app.on_message(pyro_filters.command("start") & pyro_filters.private)
 async def start_private(client, message: Message):
     user    = message.from_user
-    mention = f"<a href='tg://user?id={user.id}'>{user.first_name}</a>"
+    mention = f"<a href=\"tg://user?id={user.id}\">{user.first_name}</a>"
 
     anim = await _fire_animation(message)
 
@@ -296,7 +296,7 @@ async def start_private(client, message: Message):
         try:
             await client.send_message(
                 Config.LOG_CHANNEL,
-                f"<emoji id='6080176744709495278'>🐾</emoji> "
+                f"<emoji id=\"6080176744709495278\">🐾</emoji> "
                 f"{mention} started the bot.\n"
                 f"<b>ɪᴅ ➠</b> <code>{user.id}</code>",
             )
@@ -367,9 +367,9 @@ async def on_bot_added(client, message: Message):
         panel   = await _group_panel()
 
         run = await message.reply_text(
-            f"<emoji id='6080202089311507876'>😎</emoji> "
+            f"<emoji id=\"6080202089311507876\">😎</emoji> "
             f"<b>ʜᴇʟʟᴏ {message.chat.title}!</b>\n"
-            f"<emoji id='6001132493011425597'>💖</emoji> "
+            f"<emoji id=\"6001132493011425597\">💖</emoji> "
             f"ᴛʜᴀɴᴋs ғᴏʀ ᴀᴅᴅɪɴɢ ᴍᴇ!"
         )
         await _raw_api("editMessageReplyMarkup", {
@@ -391,7 +391,7 @@ async def on_bot_added(client, message: Message):
             try:
                 await client.send_message(
                     Config.LOG_CHANNEL,
-                    f"<emoji id='6293940475371986355'>🎉</emoji> "
+                    f"<emoji id=\"6293940475371986355\">🎉</emoji> "
                     f"<b>ᴀᴅᴅᴇᴅ ᴛᴏ ɢʀᴏᴜᴘ!</b>\n\n"
                     f"<b>📌 ɴᴀᴍᴇ :</b> {message.chat.title}\n"
                     f"<b>🆔 ɪᴅ :</b> <code>{message.chat.id}</code>",
