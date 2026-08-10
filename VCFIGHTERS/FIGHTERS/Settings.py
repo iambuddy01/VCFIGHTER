@@ -3,7 +3,7 @@ import time
 
 from pyrogram import Client
 from pyrogram import filters as pyro_filters
-from pyrogram.errors import UserAlreadyParticipant
+from pyrogram.errors import MessageNotModified, UserAlreadyParticipant
 from pyrogram.types import (
     CallbackQuery,
     InlineKeyboardButton,
@@ -614,7 +614,7 @@ async def _show_pytg_panel(query: CallbackQuery, s: dict):
                 callback_data="cfg_ptg_ns",
             )
         ],
-        [InlineKeyboardButton("˹ 💾 sᴀᴠє ˼",    callback_data="cfg_ptg_save")],
+        [InlineKeyboardButton("˹ 💾 sᴀᴠє & 𝚫ρρʟʏ ˼", callback_data="cfg_ptg_save")],
         [InlineKeyboardButton("˹ ◀️ 𝐁ᴀᴄᴋ ˼", callback_data="config_main")],
     ])
 
@@ -622,9 +622,13 @@ async def _show_pytg_panel(query: CallbackQuery, s: dict):
         "📡 **ρʏᴛɢᴄᴀʟʟs sєᴛᴛιηɢs**\n\n"
         f"sᴛʀєᴀϻ: `{st.upper()}`\n"
         f"ϙᴜᴀʟιᴛʏ: `{ql.upper()}`\n"
-        f"ηᴏιsє sᴜρρʀєssιᴏη: `{'ON' if ns else 'OFF'}`"
+        f"ηᴏιsє sᴜρρʀєssιᴏη: `{'ON' if ns else 'OFF'}`\n\n"
+        f"sᴇʟᴇᴄᴛ ᴋᴀʀᴋᴇ **sᴀᴠᴇ & 𝚫ρρʟʏ** ᴅᴀʙᴀᴏ — ᴀᴄᴛιᴠᴇ sᴛʀᴇᴀϻs ρᴇ ʙнι ʟᴀɢᴜ нᴏ ᴊᴀᴇɢᴀ."
     )
-    await query.edit_message_text(text, reply_markup=kb)
+    try:
+        await query.edit_message_text(text, reply_markup=kb)
+    except MessageNotModified:
+        pass
 
 
 
@@ -642,10 +646,30 @@ async def cb_pytg_toggle(client: Client, query: CallbackQuery):
     elif d == "cfg_ptg_ql_medium": s["quality"] = "medium"
     elif d == "cfg_ptg_ql_high":   s["quality"] = "high"
     elif d == "cfg_ptg_ns":        s["noise_suppression"] = not s.get("noise_suppression", False)
+
     elif d == "cfg_ptg_save":
         await save_pytgcalls_settings(s)
-        await query.answer("💾 sᴀᴠєᴅ ✅", show_alert=False)
+        applied = 0
+        try:
+            from VCFIGHTERS.core.call import vc
+            applied = await vc.apply_filters_to_all()
+        except Exception as e:
+            log.warning(f"⚠️ apply_filters_to_all error: {e}")
+        msg = (
+            f"✅ sᴀᴠєᴅ & {applied} sᴛʀєᴀϻ(s) ρᴇ ᴀρρʟιєᴅ"
+            if applied else
+            "💾 sᴀᴠєᴅ (ηᴏ ᴀᴄᴛιᴠᴇ sᴛʀєᴀϻs ᴀʙнι)"
+        )
+        await query.answer(msg, show_alert=True)
+        await _show_pytg_panel(query, s)
+        return
 
+    # Individual toggles still auto-save immediately — this avoids the
+    # earlier bug where an un-saved toggle got silently discarded the
+    # moment another button was pressed. "Save & Apply" above additionally
+    # pushes the current settings live to any already-playing streams.
+    await save_pytgcalls_settings(s)
+    await query.answer("✅")
     await _show_pytg_panel(query, s)
 
 
