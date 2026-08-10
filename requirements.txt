@@ -1,4 +1,4 @@
-pyrogram
+pyrofork
 TgCrypto
 py-tgcalls
 motor
@@ -7,6 +7,6 @@ dnspython
 ffmpeg-python
 aiofiles
 aiohttp
-asyncio
 nest_asyncio
 python-dotenv
+psutil
