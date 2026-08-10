@@ -46,6 +46,16 @@ def _is_valid_target_link(link: str) -> bool:
     bare = link.lstrip("@")
     return bool(_USERNAME_RE.match(bare))
 
+async def _safe_edit(target, *args, **kwargs):
+    """Edit a message/callback-query's text, silently ignoring Telegram's
+    MESSAGE_NOT_MODIFIED error (raised when the new content is identical
+    to what's already shown — e.g. a double-tap on the same button)."""
+    try:
+        await target.edit_message_text(*args, **kwargs)
+    except MessageNotModified:
+        pass
+
+
 
 def _is_chat_id_input(text: str) -> bool:
     """Numeric chat id, e.g. -1001234567890 (supergroup/channel) or a
@@ -128,7 +138,7 @@ async def cb_config_main(client: Client, query: CallbackQuery):
         await query.answer("⛔ 𝚫ᴄᴄєss ᴅєηιєᴅ", show_alert=True)
         return
     clear_state(query.from_user.id)
-    await query.edit_message_text(
+    await _safe_edit(query, 
         "⚙️ **ᴠᴄғιɢнᴛєʀ ᴄᴏηғιɢ ρᴀηєʟ**",
         reply_markup=_main_menu_kb(),
     )
@@ -156,7 +166,7 @@ async def cb_logger(client: Client, query: CallbackQuery):
         await query.answer("⛔ 𝚫ᴄᴄєss ᴅєηιєᴅ", show_alert=True)
         return
     set_state(query.from_user.id, "await_logger_chat")
-    await query.edit_message_text(
+    await _safe_edit(query, 
         "📋 **ʟᴏɢɢєʀ ᴄнᴀᴛ sєᴛ ᴋᴀʀᴏ**\n\n"
         "ʟᴏɢɢєʀ ɢʀᴏᴜρ ᴋᴀ **ᴄнᴀᴛ ιᴅ** ʙнєᴊᴏ.\n"
         "_(ᴜs ɢʀᴏᴜρ sє ᴋᴏι ʙнι ϻєssᴀɢє ғᴏʀᴡᴀʀᴅ ᴋᴀʀᴏ ʏᴀ ᴅιʀєᴄᴛ ιᴅ ρᴀsᴛє ᴋᴀʀᴏ)_",
@@ -177,7 +187,7 @@ async def cb_mode(client: Client, query: CallbackQuery):
         return
     s   = await get_settings()
     cur = s.get("mode", "dm")
-    await query.edit_message_text(
+    await _safe_edit(query, 
         f"🎮 **ϻᴏᴅє sєʟєᴄᴛ ᴋᴀʀᴏ**\n\nᴄᴜʀʀєηᴛ: `{cur.upper()}`",
         reply_markup=InlineKeyboardMarkup([
             [
@@ -203,7 +213,7 @@ async def cb_mode_dm(client: Client, query: CallbackQuery):
         return
     await save_settings({"mode": "dm"})
     await query.answer("✅ ᴅᴍ ϻᴏᴅє ᴀᴄᴛιᴠє", show_alert=False)
-    await query.edit_message_text(
+    await _safe_edit(query, 
         "🎮 **ϻᴏᴅє sєʟєᴄᴛ ᴋᴀʀᴏ**\n\nᴄᴜʀʀєηᴛ: `DM`",
         reply_markup=InlineKeyboardMarkup([
             [
@@ -223,7 +233,7 @@ async def cb_mode_auto(client: Client, query: CallbackQuery):
         return
     s   = await get_settings()
     cur = s.get("mode", "dm")
-    await query.edit_message_text(
+    await _safe_edit(query, 
         "🎮 **𝚫ᴜᴛᴏ 𝐌ᴏᴅє**\n\n"
         "🟢 **ᴏη** — ᴀᴜᴛᴏ ϻᴏᴅє sᴀᴠє ᴋᴀʀᴏ\n"
         "  _(ϻιᴄ ᴏη/ᴏff ᴅєᴛєᴄᴛ нᴏɢᴀ ᴀᴜᴛᴏ)_\n\n"
@@ -248,7 +258,7 @@ async def cb_auto_on(client: Client, query: CallbackQuery):
         return
     await save_settings({"mode": "auto"})
     await query.answer("✅ 𝚫ᴜᴛᴏ ϻᴏᴅє ᴏη!", show_alert=False)
-    await query.edit_message_text(
+    await _safe_edit(query, 
         "✅ **𝚫ᴜᴛᴏ ϻᴏᴅє ᴀᴄᴛιᴠє!**\n\n"
         "🎙️ ᴀʙ ᴊᴀʙ ᴛᴜ ᴠᴄ ϻєιη ϻιᴄ ᴏη ᴋᴀʀєɢᴀ →\n"
         "ᴜsєʀʙᴏᴛ ᴀᴜᴛᴏ ʀєᴄᴏʀᴅ ᴋʀєɢᴀ ᴀᴜʀ ʟᴏᴏρ ᴄʜᴀʟᴀʏєɢᴀ.\n\n"
@@ -269,7 +279,7 @@ async def cb_auto_ready(client: Client, query: CallbackQuery):
     await query.answer("⏳ ᴊᴏιη ᴋʀ ʀᴀнᴀ нᴜη...", show_alert=False)
     from VCFIGHTERS.FIGHTERS.Voice import vc_join_ready
     success, msg = await vc_join_ready()
-    await query.edit_message_text(
+    await _safe_edit(query, 
         msg,
         reply_markup=InlineKeyboardMarkup([
             [
@@ -341,7 +351,7 @@ async def cb_ub_page(client: Client, query: CallbackQuery):
     page     = int(query.data.split("_")[-1])
     userbots = await get_all_userbots()
     text, kb = _ub_panel(userbots, page)
-    await query.edit_message_text(text, reply_markup=kb)
+    await _safe_edit(query, text, reply_markup=kb)
 
 
 @app.on_callback_query(pyro_filters.regex("^cfg_ub_add_menu$"))
@@ -349,7 +359,7 @@ async def cb_ub_add_menu(client: Client, query: CallbackQuery):
     if not await is_authorized(query.from_user.id):
         await query.answer("⛔ 𝚫ᴄᴄєss ᴅєηιєᴅ", show_alert=True)
         return
-    await query.edit_message_text(
+    await _safe_edit(query, 
         "➕ **ᴜsєʀʙᴏᴛ ᴀᴅᴅ ᴋᴀʀᴏ**\n\nᴋᴀisє ᴀᴅᴅ ᴋᴀʀηᴀ нᴀι?",
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("˹ ρнᴏηє ηᴜϻ𝐁єʀ ˼", callback_data="cfg_ub_by_phone")],
@@ -367,7 +377,7 @@ async def cb_ub_by_phone(client: Client, query: CallbackQuery):
         await query.answer("⛔ 𝚫ᴄᴄєss ᴅєηιєᴅ", show_alert=True)
         return
     set_state(query.from_user.id, "await_phone")
-    await query.edit_message_text(
+    await _safe_edit(query, 
         "📱 **ρнᴏηє ηᴜϻʙєʀ sє ᴀᴅᴅ ᴋᴀʀᴏ**\n\n"
         "ᴄᴏᴜηᴛʀʏ ᴄᴏᴅє ᴋє sᴀᴀᴛн ηᴜϻʙєʀ ʙнєᴊᴏ:\n`+91XXXXXXXXXX`",
         reply_markup=InlineKeyboardMarkup([
@@ -384,7 +394,7 @@ async def cb_ub_manual(client: Client, query: CallbackQuery):
         await query.answer("⛔ 𝚫ᴄᴄєss ᴅєηιєᴅ", show_alert=True)
         return
     set_state(query.from_user.id, "await_session_string")
-    await query.edit_message_text(
+    await _safe_edit(query, 
         "🖊️ **ϻᴀηᴜᴀʟ sєssιᴏη sєᴛ**\n\n**sᴛʀιηɢ sєssιᴏη** ηιᴄнє ρᴀsᴛє ᴋᴀʀᴏ:",
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("˹ ◀️ 𝐁ᴀᴄᴋ ˼", callback_data="cfg_ub_add_menu")]
@@ -407,11 +417,12 @@ async def _save_manual_session(client, msg_or_query, session: str, user_id: int)
     try:
         from pyrogram import Client as PyroClient
         tmp = PyroClient(
-            "tmp_verify",
+            f"tmp_verify_{user_id}_{int(time.time())}",
             api_id=Config.API_ID,
             api_hash=Config.API_HASH,
             session_string=session,
             no_updates=True,
+            in_memory=True,
         )
         await tmp.start()
         me    = await tmp.get_me()
@@ -422,7 +433,7 @@ async def _save_manual_session(client, msg_or_query, session: str, user_id: int)
         if isinstance(msg_or_query, Message):
             await msg_or_query.reply(err)
         else:
-            await msg_or_query.edit_message_text(err)
+            await _safe_edit(msg_or_query, err)
         return
 
     await add_userbot({
@@ -443,7 +454,7 @@ async def _save_manual_session(client, msg_or_query, session: str, user_id: int)
     if isinstance(msg_or_query, Message):
         await msg_or_query.reply(ok)
     else:
-        await msg_or_query.edit_message_text(
+        await _safe_edit(msg_or_query, 
             ok,
             reply_markup=InlineKeyboardMarkup([
                 [InlineKeyboardButton("˹ ◀️ 𝐁ᴀᴄᴋ ˼", callback_data="cfg_ub_page_0")]
@@ -473,7 +484,7 @@ async def cb_ub_del(client: Client, query: CallbackQuery):
     await query.answer(f"🗑️ {ub.get('phone','?')} ᴅєʟєᴛєᴅ.", show_alert=False)
     userbots = await get_all_userbots()
     text, kb = _ub_panel(userbots, max(0, page - 1))
-    await query.edit_message_text(text, reply_markup=kb)
+    await _safe_edit(query, text, reply_markup=kb)
 
 
 @app.on_callback_query(pyro_filters.regex("^cfg_ub_delall$"))
@@ -489,7 +500,7 @@ async def cb_ub_delall(client: Client, query: CallbackQuery):
         pass
     await query.answer("🗑️ sᴀʙ ᴜsєʀʙᴏᴛs ᴅєʟєᴛє нᴏ ɢᴀʏє.", show_alert=True)
     text, kb = _ub_panel([], 0)
-    await query.edit_message_text(text, reply_markup=kb)
+    await _safe_edit(query, text, reply_markup=kb)
 
 
 # ══════════════════════════════════════════════════════════════
@@ -508,7 +519,7 @@ async def cb_target(client: Client, query: CallbackQuery):
 async def _show_targets(query: CallbackQuery, targets: list, page: int, ask_new: bool = False):
     if not targets or ask_new:
         set_state(query.from_user.id, "await_target_link")
-        await query.edit_message_text(
+        await _safe_edit(query, 
             "🎯 **ᴛᴀʀɢєᴛ sєᴛ ᴋᴀʀᴏ**\n\n"
             "ɢʀᴏᴜρ ʟιηᴋ ʙнєᴊᴏ:\n"
             "`t.me/+xxxx` (ρʀιᴠᴀᴛє) ʏᴀ `t.me/groupname` / `@groupname` (ρᴜʙʟιᴄ)\n\n"
@@ -548,7 +559,7 @@ async def _show_targets(query: CallbackQuery, targets: list, page: int, ask_new:
         [InlineKeyboardButton("˹ sєᴛ ʟιηᴋ ˼",    callback_data="cfg_target_new")],
         [InlineKeyboardButton("˹ ◀️ 𝐁ᴀᴄᴋ ˼", callback_data="config_main")],
     ]
-    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(rows))
+    await _safe_edit(query, text, reply_markup=InlineKeyboardMarkup(rows))
 
 
 @app.on_callback_query(pyro_filters.regex(r"^cfg_tgt_page_(\d+)$"))
@@ -567,7 +578,7 @@ async def cb_target_new(client: Client, query: CallbackQuery):
         await query.answer("⛔ 𝚫ᴄᴄєss ᴅєηιєᴅ", show_alert=True)
         return
     set_state(query.from_user.id, "await_target_link")
-    await query.edit_message_text(
+    await _safe_edit(query, 
         "🎯 **ηʏᴀ ᴛᴀʀɢєᴛ**\n\n"
         "ɢʀᴏᴜρ ʟιηᴋ ʙнєᴊᴏ:\n"
         "`t.me/+xxxx` (ρʀιᴠᴀᴛє) ʏᴀ `t.me/groupname` / `@groupname` (ρᴜʙʟιᴄ)\n\n"
@@ -625,10 +636,7 @@ async def _show_pytg_panel(query: CallbackQuery, s: dict):
         f"ηᴏιsє sᴜρρʀєssιᴏη: `{'ON' if ns else 'OFF'}`\n\n"
         f"sᴇʟᴇᴄᴛ ᴋᴀʀᴋᴇ **sᴀᴠᴇ & 𝚫ρρʟʏ** ᴅᴀʙᴀᴏ — ᴀᴄᴛιᴠᴇ sᴛʀᴇᴀϻs ρᴇ ʙнι ʟᴀɢᴜ нᴏ ᴊᴀᴇɢᴀ."
     )
-    try:
-        await query.edit_message_text(text, reply_markup=kb)
-    except MessageNotModified:
-        pass
+    await _safe_edit(query, text, reply_markup=kb)
 
 
 
@@ -721,7 +729,7 @@ async def _show_pings(query: CallbackQuery):
         f"🗄️ ϻᴏηɢᴏᴅʙ: **{mongo_str}**\n\n"
         f"{ub_text}"
     )
-    await query.edit_message_text(
+    await _safe_edit(query, 
         text,
         reply_markup=InlineKeyboardMarkup([
             [
@@ -778,7 +786,12 @@ async def conversation_handler(client: Client, message: Message):
         phone = message.text.strip()
         try:
             from pyrogram import Client as PyroClient
-            tmp  = PyroClient("tmp_login", api_id=Config.API_ID, api_hash=Config.API_HASH)
+            tmp  = PyroClient(
+                f"tmp_login_{uid}_{int(time.time())}",
+                api_id=Config.API_ID,
+                api_hash=Config.API_HASH,
+                in_memory=True,
+            )
             await tmp.connect()
             sent = await tmp.send_code(phone)
             set_state(uid, "await_otp", phone=phone, phone_code_hash=sent.phone_code_hash, tmp=tmp)
