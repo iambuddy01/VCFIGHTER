@@ -4,12 +4,23 @@
 # ╚══════════════════════════════════════════════════════════════╝
 
 from pyrogram import Client
+import hashlib
 
 import Config
 from VCFIGHTERS.logging import LOGGER
 from VCFIGHTERS.database.mangodb import set_userbot_active
 
 log = LOGGER("Userbot")
+
+
+def _stable_session_name(session: str) -> str:
+    """Deterministic name derived from the session string. Python's built-in
+    hash() is randomized per-process (security feature), so using it here
+    would give each userbot a different Client `name` on every restart —
+    and since Pyrogram persists a `<name>.session` file to disk by default,
+    that meant a new orphaned file accumulating on every restart."""
+    digest = hashlib.sha256(session.encode()).hexdigest()[:12]
+    return f"ub_{digest}"
 
 
 class UserbotManager:
@@ -34,11 +45,12 @@ class UserbotManager:
 
         try:
             client = Client(
-                name=f"ub_{abs(hash(session)) % 100000}",
+                name=_stable_session_name(session),
                 api_id=Config.API_ID,
                 api_hash=Config.API_HASH,
                 session_string=session,
                 no_updates=False,   # updates chahiye — PyTgCalls ke liye
+                in_memory=True,     # session string se hi login hota hai — disk file ki zaroorat nahi
             )
             await client.start()
             me = await client.get_me()
