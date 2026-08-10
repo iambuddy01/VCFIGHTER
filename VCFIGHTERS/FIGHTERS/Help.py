@@ -1,4 +1,5 @@
 from pyrogram import filters as pyro_filters
+from pyrogram.errors import MessageNotModified
 from pyrogram.types import (
     CallbackQuery,
     InlineKeyboardButton,
@@ -8,6 +9,16 @@ from pyrogram.types import (
 
 from VCFIGHTERS.core.bot import app
 from VCFIGHTERS.FIGHTERS.sudo import is_authorized
+
+async def _safe_edit(target, *args, **kwargs):
+    """Edit a message/callback-query's text, silently ignoring Telegram's
+    MESSAGE_NOT_MODIFIED error (raised when the new content is identical
+    to what's already shown — e.g. a double-tap on the same button)."""
+    try:
+        await target.edit_message_text(*args, **kwargs)
+    except MessageNotModified:
+        pass
+
 
 # ──────────────────────────────────────────────────────────────
 # HELP CONTENT
@@ -115,7 +126,7 @@ async def cb_hlp_main(client, query: CallbackQuery):
     if not await is_authorized(query.from_user.id):
         await query.answer("⛔ 𝚫ᴄᴄєss ᴅєηιєᴅ", show_alert=True)
         return
-    await query.edit_message_text(
+    await _safe_edit(query, 
         "⚔️ **ᴠᴄғιɢнᴛєʀ ʜєʟρ**\n\nᴋᴀᴜηsᴀ sєᴄᴛιᴏη ᴄʜᴀʜιᴇ?",
         reply_markup=_main_help_kb(),
     )
@@ -129,7 +140,7 @@ async def cb_hlp_section(client, query: CallbackQuery):
         return
     key  = query.data.split("_")[1]
     text = _SECTIONS.get(key, "ηᴏᴛ ғᴏᴜηᴅ.")
-    await query.edit_message_text(text, reply_markup=_back_kb())
+    await _safe_edit(query, text, reply_markup=_back_kb())
     await query.answer()
 
 
